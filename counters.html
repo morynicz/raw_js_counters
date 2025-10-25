@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script>
+
+        class CountersTable extends HTMLElement {
+            static observedAttributes = ["users"];
+
+            constructor() {
+                super();
+            }
+
+            connectedCallback() {
+                this.names = ["adam", "jan"];
+                this.users = [];
+                this.counters = ["ah", "eh"];
+                let table = this.makeTable();
+                const shadow = this.attachShadow({mode: "open"});
+                shadow.appendChild(table);
+            }
+
+            // addUser(name) {
+            //     this.users.push({name: name, counters: []});
+            // }
+
+            attributeChangedCallback(name, oldValue, newValue) {
+                console.log(name, newValue);
+            }
+
+            makeTable() {
+                this.setAttribute("id", "counters");
+                const table = document.createElement("table");
+                table.setAttribute("id", "counters-table");
+                this.names.forEach((name) => {
+                    let user = {name: name, counters: this.counters.map((counter) => ({name: counter, value: 0}))};
+                    this.users.push(user);
+                    let row = this.makeRow(this.users.at(-1));
+                    table.appendChild(row);
+                });
+                return table;
+            }
+
+            updateTable() {
+                const el = document.getElementById("counters");
+                const table = el.shadowRoot.getElementById("counters-table");
+                // table.rows.forEach((row) => {
+                //    name = row.cells[0];
+                //    console.log(name);
+                // });
+                table.childNodes.forEach(node => {
+                    let name = node.firstChild.textContent;
+                    let user = this.users.find(user => user.name === name);
+                    for (let i = 0; i < user.counters.length; i++) {
+                        let counterNode = node.childNodes[i + 1];
+                        let fc = counterNode.firstChild.firstChild;
+                        fc.textContent = user.counters[i];
+                        console.log(counterNode);
+                    }
+                    console.log("user", user);
+                });
+            }
+
+            makeRow(user) {
+                const row = document.createElement("tr");
+                let name = document.createElement("td");
+                name.textContent = user.name;
+                row.appendChild(name);
+
+                let summaryCell = document.createElement("td");
+                summaryCell.textContent = 0;
+
+                let counters = this.makeCounterCells(user, summaryCell);
+                counters.forEach((counter) => {
+                    row.appendChild(counter);
+                });
+                row.appendChild(summaryCell);
+                return row;
+            }
+
+
+            makeCounterCells(user, summaryCell) {
+                return user.counters.map((counter, idx) => {
+                    let span = document.createElement("span");
+                    let value = document.createElement("span");
+                    value.textContent = counter.value;
+                    value.setAttribute("id", "counter-value");
+                    span.appendChild(value);
+
+                    let plus = document.createElement("button");
+                    plus.textContent = "+";
+                    plus.addEventListener("click", () => {
+                        user.counters[idx].value++;
+                        // counter.value++;
+                        value.textContent = user.counters[idx].value;
+                        let users = this.users;
+                        let userSum = user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
+                        let total = users.reduce((sum, usr) => sum + usr.counters.reduce((sum, cnt) => sum + cnt.value, 0), 0);
+                        let share = 0;
+                        if (total) {
+                            share = userSum / total * 100;
+                        }
+                        summaryCell.textContent = share;
+                        // this.updateTable();
+                    });
+                    span.appendChild(plus);
+                    return span;
+                });
+            }
+
+
+        };
+
+        customElements.define('counters-table', CountersTable);
+    </script>
+</head>
+<body>
+<counters-table></counters-table>
+</body>
+</html>
