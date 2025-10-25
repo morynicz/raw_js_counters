@@ -45,19 +45,19 @@
             updateTable() {
                 const el = document.getElementById("counters");
                 const table = el.shadowRoot.getElementById("counters-table");
-                // table.rows.forEach((row) => {
-                //    name = row.cells[0];
-                //    console.log(name);
-                // });
+                let total = this.users.reduce((sum, usr) => sum + usr.counters.reduce((sum, cnt) => sum + cnt.value, 0), 0);
                 table.childNodes.forEach(node => {
                     let name = node.firstChild.textContent;
                     let user = this.users.find(user => user.name === name);
+                    let userSum = user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
                     for (let i = 0; i < user.counters.length; i++) {
                         let counterNode = node.childNodes[i + 1];
                         let fc = counterNode.firstChild.firstChild;
-                        fc.textContent = user.counters[i];
+                        fc.textContent = user.counters[i].value;
                         console.log(counterNode);
                     }
+                    let summaryNode = node.lastChild;
+                    summaryNode.firstChild.textContent = '' + Math.round(userSum/total * 100) + '%';
                     console.log("user", user);
                 });
             }
@@ -70,6 +70,7 @@
 
                 let summaryCell = document.createElement("td");
                 summaryCell.textContent = 0;
+                summaryCell.setAttribute("id", "summary");
 
                 let counters = this.makeCounterCells(user, summaryCell);
                 counters.forEach((counter) => {
@@ -93,16 +94,16 @@
                     plus.addEventListener("click", () => {
                         user.counters[idx].value++;
                         // counter.value++;
-                        value.textContent = user.counters[idx].value;
-                        let users = this.users;
-                        let userSum = user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
-                        let total = users.reduce((sum, usr) => sum + usr.counters.reduce((sum, cnt) => sum + cnt.value, 0), 0);
-                        let share = 0;
-                        if (total) {
-                            share = userSum / total * 100;
-                        }
-                        summaryCell.textContent = share;
-                        // this.updateTable();
+                        // value.textContent = user.counters[idx].value;
+                        // let users = this.users;
+                        // let userSum = user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
+                        // let total = users.reduce((sum, usr) => sum + usr.counters.reduce((sum, cnt) => sum + cnt.value, 0), 0);
+                        // let share = 0;
+                        // if (total) {
+                        //     share = userSum / total * 100;
+                        // }
+                        // summaryCell.textContent = share;
+                        this.updateTable();
                     });
                     span.appendChild(plus);
                     return span;
