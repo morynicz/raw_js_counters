@@ -36,7 +36,7 @@
                 localStorage.setItem("users", JSON.stringify(this.users));
             }
 
-            readState(){
+            readState() {
                 this.names = JSON.parse(localStorage.getItem("names"));
                 this.counters = JSON.parse(localStorage.getItem("counters"));
                 if (this.counters && this.names) {
@@ -49,15 +49,15 @@
                 }
             }
 
-            clearValues(){
-                this.users.forEach(user => user.counters.forEach((counter)=>{
+            clearValues() {
+                this.users.forEach(user => user.counters.forEach((counter) => {
                     console.log(counter);
                     counter.value = 0;
                     console.log(counter);
                 }));
             }
 
-            clearState(){
+            clearState() {
                 localStorage.clear();
             }
 
@@ -104,7 +104,7 @@
                 })
             }
 
-            updateBody(){
+            updateBody() {
                 const el = document.getElementById("counters");
                 const body = el.shadowRoot.getElementById("counters-body");
                 while (body.firstChild) {
@@ -113,7 +113,7 @@
                 this.fillBody(body);
             }
 
-            makeUserAdd(){
+            makeUserAdd() {
                 let row = document.createElement("tr");
                 let nameCell = document.createElement("th");
                 nameCell.setAttribute("colspan", 1 + this.counters.length);
@@ -125,10 +125,15 @@
                 addButton.textContent = "Add User";
                 addButton.addEventListener("click", () => {
                     const el = document.getElementById("counters");
-                    let name = el.shadowRoot.getElementById("counters-add-user").value;
-                    this.names.push(name);
-                    this.addUser(name);
-                    this.updateBody()();
+                    let nameInput = el.shadowRoot.getElementById("counters-add-user");
+                    let name = nameInput.value;
+                    if (undefined === this.names.find((known)=>{return known === name;})) {
+                        this.names.push(name);
+                        this.addUser(name);
+                        this.updateBody();
+                        nameInput.value = "";
+                        return;
+                    }
                 });
                 let buttonCell = document.createElement("th");
                 buttonCell.appendChild(addButton);
@@ -136,20 +141,20 @@
                 return row;
             }
 
-            makeClearValues(){
+            makeClearValues() {
                 let clearValues = document.createElement("button");
                 clearValues.textContent = "Clear values";
-                clearValues.addEventListener("click",()=>{
+                clearValues.addEventListener("click", () => {
                     this.clearValues();
                     this.updateTable();
                 });
                 return clearValues;
             }
 
-            makeClearState(){
+            makeClearState() {
                 let clearState = document.createElement("button");
                 clearState.textContent = "Clear state";
-                clearState.addEventListener("click",()=>{
+                clearState.addEventListener("click", () => {
                     this.clearState();
                     this.readState();
                     this.updateBody();
@@ -159,7 +164,7 @@
                 return clearState;
             }
 
-            makeClearButtons(){
+            makeClearButtons() {
                 let row = document.createElement("tr");
                 let buttons = document.createElement("th");
                 buttons.setAttribute("colspan", 2 + this.counters.length);
