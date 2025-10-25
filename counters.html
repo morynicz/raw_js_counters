@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <style>
+        :host(.counter-table) {
+            border-collapse: collapse;
+            border: 1px solid black;
+        }
+    </style>
     <script>
+        const summaryBaseStyle = "align: center; text-align: center;";
+
 
         class CountersTable extends HTMLElement {
             static observedAttributes = ["users"];
@@ -12,10 +20,21 @@
                 super();
             }
 
+            calculateColor(value) {
+                return "background-color: rgba(" + [255 * value / 100, 255 * (100 - value) / 100, 0, 1].join(",") + ")";
+            }
+
+            initUsers() {
+                this.names.forEach((name) => {
+                    this.addUser(name);
+                });
+            }
+
             connectedCallback() {
                 this.names = ["adam", "jan"];
                 this.users = [];
-                this.counters = ["ah", "eh"];
+                this.counters = ["Unnecessary sounds", "Pauses", "Repeats", "Misc"];
+                this.initUsers();
                 let table = this.makeTable();
                 const shadow = this.attachShadow({mode: "open"});
                 shadow.appendChild(table);
@@ -43,35 +62,88 @@
                 return header;
             }
 
+            addUser(name) {
+                let user = {name: name, counters: this.counters.map((counter) => ({name: counter, value: 0}))};
+                this.users.push(user);
+            }
+
+            fillBody(body) {
+                this.users.forEach((user) => {
+                    let row = this.makeRow(user);
+                    body.appendChild(row);
+                })
+            }
+
+            makeFooter() {
+                let footer = document.createElement("tfoot");
+                let row = document.createElement("tr");
+                let nameCell = document.createElement("th");
+                nameCell.setAttribute("colspan", 1 + this.counters.length);
+                let input = document.createElement("input");
+                input.setAttribute("id", "counters-add-user");
+                nameCell.appendChild(input);
+                row.appendChild(nameCell);
+                let addButton = document.createElement("button");
+                addButton.textContent = "Add User";
+                addButton.addEventListener("click", () => {
+                    const el = document.getElementById("counters");
+                    let name = el.shadowRoot.getElementById("counters-add-user").value;
+                    this.names.push(name);
+                    this.addUser(name);
+                    const body = el.shadowRoot.getElementById("counters-body");
+                    while (body.firstChild) {
+                        body.removeChild(body.lastChild);
+                    }
+                    this.fillBody(body);
+                });
+                let buttonCell = document.createElement("th");
+                buttonCell.appendChild(addButton);
+                row.appendChild(buttonCell);
+                footer.appendChild(row);
+                return footer;
+            }
+
+            buildTable(table) {
+                table.appendChild(this.makeHeader());
+                let body = document.createElement("tbody");
+                body.setAttribute("id", "counters-body");
+                this.fillBody(body);
+                table.appendChild(body);
+                let footer = this.makeFooter();
+                table.appendChild(footer);
+            }
+
             makeTable() {
                 this.setAttribute("id", "counters");
                 const table = document.createElement("table");
                 table.setAttribute("id", "counters-table");
                 table.classList.add("counter-table");
-                table.appendChild(this.makeHeader());
-                let body = document.createElement("tbody");
-                this.names.forEach((name) => {
-                    let user = {name: name, counters: this.counters.map((counter) => ({name: counter, value: 0}))};
-                    this.users.push(user);
-                    let row = this.makeRow(this.users.at(-1));
-                    body.appendChild(row);
-                });
-                table.appendChild(body)
+                this.buildTable(table);
                 return table;
             }
 
-            calculateSummary(value, total)
-            {
-                if(total > 0){
+            calculateSummary(value, total) {
+                if (total > 0) {
                     return Math.round(value / total * 100);
                 }
                 return 0;
             }
 
+            calculateUserSum(user) {
+                return user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
+            }
+
+            printSummary(summaryValue) {
+                return '' + summaryValue + '%';
+            }
+
             updateRow(node, total) {
+                if (node.name === "TH") {
+                    return;
+                }
                 let name = node.firstChild.textContent;
                 let user = this.users.find(user => user.name === name);
-                let userSum = user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
+                let userSum = this.calculateUserSum(user);
                 for (let i = 0; i < user.counters.length; i++) {
                     let counterNode = node.childNodes[i + 1];
                     let fc = counterNode.firstChild.firstChild;
@@ -80,15 +152,18 @@
                 }
                 let summaryNode = node.lastChild;
                 let summaryValue = this.calculateSummary(userSum, total);
-                summaryNode.firstChild.textContent = '' + summaryValue + '%';
+                summaryNode.style = summaryBaseStyle + this.calculateColor(summaryValue);
+                summaryNode.firstChild.textContent = this.printSummary(summaryValue);
             }
 
+            calculateTotal() {
+                return this.users.reduce((sum, usr) => sum + usr.counters.reduce((sum, cnt) => sum + cnt.value, 0), 0);
+            }
 
             updateTable() {
                 const el = document.getElementById("counters");
-                const table = el.shadowRoot.getElementById("counters-table");
-                const body = table.lastChild;
-                let total = this.users.reduce((sum, usr) => sum + usr.counters.reduce((sum, cnt) => sum + cnt.value, 0), 0);
+                const body = el.shadowRoot.getElementById("counters-body");
+                let total = this.calculateTotal();
                 body.childNodes.forEach(node => {
                     this.updateRow(node, total);
                 });
@@ -101,9 +176,10 @@
                 row.appendChild(name);
 
                 let summaryCell = document.createElement("td");
-                summaryCell.textContent = 0;
+                let summaryValue = this.calculateSummary(this.calculateUserSum(user), this.calculateTotal());
+                summaryCell.textContent = this.printSummary(summaryValue);
                 summaryCell.setAttribute("id", "summary");
-                summaryCell.style = "align: center; text-align: center;";
+                summaryCell.style = summaryBaseStyle + this.calculateColor(summaryValue)
 
                 let counters = this.makeCounterCells(user, summaryCell);
                 counters.forEach((counter) => {
@@ -115,7 +191,7 @@
                 return row;
             }
 
-            makeButton(label, lambda){
+            makeButton(label, lambda) {
                 let button = document.createElement("button");
                 button.textContent = label;
                 button.addEventListener("click", lambda);
@@ -133,14 +209,16 @@
 
                     let buttons = document.createElement("span");
                     buttons.style = "display: inline-block;";
-                    let plus = this.makeButton("+",() => {
-                            user.counters[idx].value++;
-                            this.updateTable();
-                        });
-                    buttons.appendChild(plus);
-                    let minus = this.makeButton("-",() => {
-                        user.counters[idx].value--;
+                    let plus = this.makeButton("+", () => {
+                        user.counters[idx].value++;
                         this.updateTable();
+                    });
+                    buttons.appendChild(plus);
+                    let minus = this.makeButton("-", () => {
+                        if (user.counters[idx].value > 0) {
+                            user.counters[idx].value--;
+                            this.updateTable();
+                        }
                     });
                     buttons.appendChild(minus);
                     cell.appendChild(buttons)
