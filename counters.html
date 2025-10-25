@@ -47,7 +47,7 @@
                 this.setAttribute("id", "counters");
                 const table = document.createElement("table");
                 table.setAttribute("id", "counters-table");
-                // let header = makeHeader();
+                table.classList.add("counter-table");
                 table.appendChild(this.makeHeader());
                 let body = document.createElement("tbody");
                 this.names.forEach((name) => {
@@ -60,7 +60,15 @@
                 return table;
             }
 
-            updateRow(node, total){
+            calculateSummary(value, total)
+            {
+                if(total > 0){
+                    return Math.round(value / total * 100);
+                }
+                return 0;
+            }
+
+            updateRow(node, total) {
                 let name = node.firstChild.textContent;
                 let user = this.users.find(user => user.name === name);
                 let userSum = user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
@@ -71,8 +79,10 @@
                     console.log(counterNode);
                 }
                 let summaryNode = node.lastChild;
-                summaryNode.firstChild.textContent = '' + Math.round(userSum/total * 100) + '%';
+                let summaryValue = this.calculateSummary(userSum, total);
+                summaryNode.firstChild.textContent = '' + summaryValue + '%';
             }
+
 
             updateTable() {
                 const el = document.getElementById("counters");
@@ -93,6 +103,7 @@
                 let summaryCell = document.createElement("td");
                 summaryCell.textContent = 0;
                 summaryCell.setAttribute("id", "summary");
+                summaryCell.style = "align: center; text-align: center;";
 
                 let counters = this.makeCounterCells(user, summaryCell);
                 counters.forEach((counter) => {
@@ -104,28 +115,39 @@
                 return row;
             }
 
+            makeButton(label, lambda){
+                let button = document.createElement("button");
+                button.textContent = label;
+                button.addEventListener("click", lambda);
+                return button;
+            }
 
             makeCounterCells(user, summaryCell) {
                 return user.counters.map((counter, idx) => {
-                    let span = document.createElement("span");
+                    let cell = document.createElement("div");
+                    cell.setAttribute("id", "counter-value");
                     let value = document.createElement("span");
+                    value.style = "display: inline-block;";
                     value.textContent = counter.value;
-                    value.setAttribute("id", "counter-value");
-                    span.appendChild(value);
+                    cell.appendChild(value);
 
-                    let plus = document.createElement("button");
-                    plus.textContent = "+";
-                    plus.addEventListener("click", () => {
-                        user.counters[idx].value++;
+                    let buttons = document.createElement("span");
+                    buttons.style = "display: inline-block;";
+                    let plus = this.makeButton("+",() => {
+                            user.counters[idx].value++;
+                            this.updateTable();
+                        });
+                    buttons.appendChild(plus);
+                    let minus = this.makeButton("-",() => {
+                        user.counters[idx].value--;
                         this.updateTable();
                     });
-                    span.appendChild(plus);
-                    return span;
+                    buttons.appendChild(minus);
+                    cell.appendChild(buttons)
+                    return cell;
                 });
             }
-
-
-        };
+        }
 
         customElements.define('counters-table', CountersTable);
     </script>
