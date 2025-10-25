@@ -21,44 +21,66 @@
                 shadow.appendChild(table);
             }
 
-            // addUser(name) {
-            //     this.users.push({name: name, counters: []});
-            // }
-
             attributeChangedCallback(name, oldValue, newValue) {
                 console.log(name, newValue);
+            }
+
+            makeHeader() {
+                let header = document.createElement("thead");
+                let row = document.createElement("tr");
+                let name = document.createElement("th");
+                name.textContent = "name";
+                row.appendChild(name);
+                this.counters.forEach(counter => {
+                    let cnt = document.createElement("th");
+                    cnt.textContent = counter;
+                    row.appendChild(cnt);
+                });
+                let summary = document.createElement("th");
+                summary.textContent = "Summary";
+                row.appendChild(summary);
+                header.appendChild(row);
+                return header;
             }
 
             makeTable() {
                 this.setAttribute("id", "counters");
                 const table = document.createElement("table");
                 table.setAttribute("id", "counters-table");
+                // let header = makeHeader();
+                table.appendChild(this.makeHeader());
+                let body = document.createElement("tbody");
                 this.names.forEach((name) => {
                     let user = {name: name, counters: this.counters.map((counter) => ({name: counter, value: 0}))};
                     this.users.push(user);
                     let row = this.makeRow(this.users.at(-1));
-                    table.appendChild(row);
+                    body.appendChild(row);
                 });
+                table.appendChild(body)
                 return table;
+            }
+
+            updateRow(node, total){
+                let name = node.firstChild.textContent;
+                let user = this.users.find(user => user.name === name);
+                let userSum = user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
+                for (let i = 0; i < user.counters.length; i++) {
+                    let counterNode = node.childNodes[i + 1];
+                    let fc = counterNode.firstChild.firstChild;
+                    fc.textContent = user.counters[i].value;
+                    console.log(counterNode);
+                }
+                let summaryNode = node.lastChild;
+                summaryNode.firstChild.textContent = '' + Math.round(userSum/total * 100) + '%';
             }
 
             updateTable() {
                 const el = document.getElementById("counters");
                 const table = el.shadowRoot.getElementById("counters-table");
+                const body = table.lastChild;
                 let total = this.users.reduce((sum, usr) => sum + usr.counters.reduce((sum, cnt) => sum + cnt.value, 0), 0);
-                table.childNodes.forEach(node => {
-                    let name = node.firstChild.textContent;
-                    let user = this.users.find(user => user.name === name);
-                    let userSum = user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
-                    for (let i = 0; i < user.counters.length; i++) {
-                        let counterNode = node.childNodes[i + 1];
-                        let fc = counterNode.firstChild.firstChild;
-                        fc.textContent = user.counters[i].value;
-                        console.log(counterNode);
-                    }
-                    let summaryNode = node.lastChild;
-                    summaryNode.firstChild.textContent = '' + Math.round(userSum/total * 100) + '%';
-                    console.log("user", user);
+                body.childNodes.forEach(node => {
+                    this.updateRow(node, total);
                 });
             }
 
@@ -74,7 +96,9 @@
 
                 let counters = this.makeCounterCells(user, summaryCell);
                 counters.forEach((counter) => {
-                    row.appendChild(counter);
+                    let cell = document.createElement("td");
+                    cell.appendChild(counter);
+                    row.appendChild(cell);
                 });
                 row.appendChild(summaryCell);
                 return row;
@@ -93,16 +117,6 @@
                     plus.textContent = "+";
                     plus.addEventListener("click", () => {
                         user.counters[idx].value++;
-                        // counter.value++;
-                        // value.textContent = user.counters[idx].value;
-                        // let users = this.users;
-                        // let userSum = user.counters.reduce((sum, cnt) => sum + cnt.value, 0);
-                        // let total = users.reduce((sum, usr) => sum + usr.counters.reduce((sum, cnt) => sum + cnt.value, 0), 0);
-                        // let share = 0;
-                        // if (total) {
-                        //     share = userSum / total * 100;
-                        // }
-                        // summaryCell.textContent = share;
                         this.updateTable();
                     });
                     span.appendChild(plus);
