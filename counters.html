@@ -30,14 +30,43 @@
                 });
             }
 
+            storeState() {
+                localStorage.setItem("names", JSON.stringify(this.names));
+                localStorage.setItem("counters", JSON.stringify(this.counters));
+                localStorage.setItem("users", JSON.stringify(this.users));
+            }
+
+            readState(){
+                this.names = JSON.parse(localStorage.getItem("names"));
+                this.counters = JSON.parse(localStorage.getItem("counters"));
+                if (this.counters && this.names) {
+                    this.users = JSON.parse(localStorage.getItem("users"));
+                } else {
+                    this.names = [];
+                    this.users = [];
+                    this.counters = ["Unnecessary sounds", "Pauses", "Repeats", "Misc"];
+                    this.initUsers();
+                }
+            }
+
+            clearValues(){
+                this.users.forEach(user => user.counters.forEach((counter)=>{
+                    console.log(counter);
+                    counter.value = 0;
+                    console.log(counter);
+                }));
+            }
+
+            clearState(){
+                localStorage.clear();
+            }
+
             connectedCallback() {
-                this.names = ["adam", "jan"];
-                this.users = [];
-                this.counters = ["Unnecessary sounds", "Pauses", "Repeats", "Misc"];
-                this.initUsers();
+                this.readState();
                 let table = this.makeTable();
                 const shadow = this.attachShadow({mode: "open"});
                 shadow.appendChild(table);
+                this.storeState();
             }
 
             attributeChangedCallback(name, oldValue, newValue) {
@@ -65,6 +94,7 @@
             addUser(name) {
                 let user = {name: name, counters: this.counters.map((counter) => ({name: counter, value: 0}))};
                 this.users.push(user);
+                this.storeState();
             }
 
             fillBody(body) {
@@ -74,8 +104,16 @@
                 })
             }
 
-            makeFooter() {
-                let footer = document.createElement("tfoot");
+            updateBody(){
+                const el = document.getElementById("counters");
+                const body = el.shadowRoot.getElementById("counters-body");
+                while (body.firstChild) {
+                    body.removeChild(body.lastChild);
+                }
+                this.fillBody(body);
+            }
+
+            makeUserAdd(){
                 let row = document.createElement("tr");
                 let nameCell = document.createElement("th");
                 nameCell.setAttribute("colspan", 1 + this.counters.length);
@@ -90,16 +128,55 @@
                     let name = el.shadowRoot.getElementById("counters-add-user").value;
                     this.names.push(name);
                     this.addUser(name);
-                    const body = el.shadowRoot.getElementById("counters-body");
-                    while (body.firstChild) {
-                        body.removeChild(body.lastChild);
-                    }
-                    this.fillBody(body);
+                    this.updateBody()();
                 });
                 let buttonCell = document.createElement("th");
                 buttonCell.appendChild(addButton);
                 row.appendChild(buttonCell);
-                footer.appendChild(row);
+                return row;
+            }
+
+            makeClearValues(){
+                let clearValues = document.createElement("button");
+                clearValues.textContent = "Clear values";
+                clearValues.addEventListener("click",()=>{
+                    this.clearValues();
+                    this.updateTable();
+                });
+                return clearValues;
+            }
+
+            makeClearState(){
+                let clearState = document.createElement("button");
+                clearState.textContent = "Clear state";
+                clearState.addEventListener("click",()=>{
+                    this.clearState();
+                    this.readState();
+                    this.updateBody();
+                    this.updateTable();
+
+                });
+                return clearState;
+            }
+
+            makeClearButtons(){
+                let row = document.createElement("tr");
+                let buttons = document.createElement("th");
+                buttons.setAttribute("colspan", 2 + this.counters.length);
+                let clearValues = this.makeClearValues();
+                buttons.appendChild(clearValues);
+                let clearState = this.makeClearState();
+                buttons.appendChild(clearState);
+                row.appendChild(buttons);
+                return row;
+            }
+
+            makeFooter() {
+                let footer = document.createElement("tfoot");
+                let userAdd = this.makeUserAdd();
+                footer.appendChild(userAdd);
+                let clearButtons = this.makeClearButtons();
+                footer.appendChild(clearButtons);
                 return footer;
             }
 
@@ -148,7 +225,6 @@
                     let counterNode = node.childNodes[i + 1];
                     let fc = counterNode.firstChild.firstChild;
                     fc.textContent = user.counters[i].value;
-                    console.log(counterNode);
                 }
                 let summaryNode = node.lastChild;
                 let summaryValue = this.calculateSummary(userSum, total);
@@ -212,12 +288,14 @@
                     let plus = this.makeButton("+", () => {
                         user.counters[idx].value++;
                         this.updateTable();
+                        this.storeState();
                     });
                     buttons.appendChild(plus);
                     let minus = this.makeButton("-", () => {
                         if (user.counters[idx].value > 0) {
                             user.counters[idx].value--;
                             this.updateTable();
+                            this.storeState();
                         }
                     });
                     buttons.appendChild(minus);
